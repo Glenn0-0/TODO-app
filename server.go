@@ -9,6 +9,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/template/html"
+	"github.com/joho/godotenv"
 )
 
 type todo struct {
@@ -16,7 +17,7 @@ type todo struct {
 }
 
 func main() {
-	connStr := "postgresql://postgres:111111@localhost/todos?sslmode=disable"
+	connStr := "postgresql://postgres:111111@localhost/TODOs?sslmode=disable"
 
 	// connect to the database.
 	db, err := sql.Open("postgres", connStr)
@@ -24,7 +25,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	engine := html.New("./views", ".html")
+	engine := html.New("./views", "index.html")
 	app := fiber.New(fiber.Config{
 		Views: engine,
 	})
@@ -45,12 +46,18 @@ func main() {
 		return deleteHandler(c, db)
 	})
 
+	// handling errors opening .env file.
+	if err := godotenv.Load(); err != nil {
+		log.Println("Error loading .env file")
+	}
+
+	// getting PORT from .env file.
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "5432"
 	}
 
-	app.Static("/", "./public")
+	app.Static("/", "./views/public")
 	log.Fatalln(app.Listen(fmt.Sprintf(":%v", port)))
 }
 
@@ -87,7 +94,7 @@ func postHandler(c *fiber.Ctx, db *sql.DB) error {
 	if newTodo.Item != "" {
 		_, err := db.Exec("INSERT into TODOs VALUES ($1)", newTodo.Item)
 		if err != nil {
-			log.Fatal("An error occurred while executing query: %v", err)
+			log.Fatal("An error occurred while executing query: %w", err)
 		}
 	}
 
